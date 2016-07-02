@@ -1,0 +1,438 @@
+               .deffile adi_defs.asm
+               .deffile ddi_defs.asm
+               .deffile reg_defs.asm
+               .deffile sce_defs.asm
+               
+               ; Number of supported tasks
+               .define TASK_COUNT      1
+               
+               ; Resource-specified definitions, if any
+               ; (None)
+               
+               
+               .segment begin "Framework"
+               
+               
+               VectorTable:
+0000 ---- 1408                         jsr         PowerUp
+0001 ---- 040c                         jmp         TaskCtrlReqVector
+0002 ---- 1408                         jsr         PowerUp
+0003 ---- 042d                         jmp         AonRtcCh2Vector
+0004 ---- 1408                         jsr         PowerUp
+0005 ---- 0449                         jmp         TaskAlertAckVector
+0006 ---- 045c                         jmp         UnusedVector
+0007 ---- fd47                         nop
+               
+               
+               
+               
+               PowerUp:
+                                       ; Deassert the power-down request
+0008 ---- 4436                         iobclr      #0, [#IOP_WUC_PWRDWNREQ]
+               
+                                       ; Wait for it to take effect
+0009 ---- 2437 /waitForPdAck:          iobtst      #0, [#IOP_WUC_PWRDWNACK]
+000a ---- aefe                         biob1       /waitForPdAck
+               
+               FwEmptyFunc:            ; Done
+000b ---- adb7                         rts
+               
+               
+               
+               
+               TaskCtrlReqVector:
+                                       ; Clear the vector flag
+000c ---- 0001                         ld          R0, #(1 << 0)
+000d ---- 8b42                         out         R0, [#IOP_EVCTL_VECFLAGSCLR]
+               
+                                       ; For each task ...
+000e ---- 7000                         ld          R7, #0
+               /loop:
+                                           ; Save the task ID
+000f ---- 7c6c                             st          R7, [#fwCtrlInt/taskId]
+               
+                                           ; Handle initialize request, if any
+0010 ---- 6874                             ld          R6, [#fwCtrlExt/bvTaskInitializeReq]
+0011 ---- 0069                             ld          R0, #pFwTaskInitializeFuncTable
+0012 ---- 1426                             jsr         /handleReq
+               
+                                           ; Handle execute request, if any
+0013 ---- 6875                             ld          R6, [#fwCtrlExt/bvTaskExecuteReq]
+0014 ---- 006a                             ld          R0, #pFwTaskExecuteFuncTable
+0015 ---- 1426                             jsr         /handleReq
+               
+                                           ; Handle terminate request, if any
+0016 ---- 6876                             ld          R6, [#fwCtrlExt/bvTaskTerminateReq]
+0017 ---- 006b                             ld          R0, #pFwTaskTerminateFuncTable
+0018 ---- 1426                             jsr         /handleReq
+               
+                                           ; Move on to the next task
+0019 ---- 786c                             ld          R7, [#fwCtrlInt/taskId]
+001a ---- f801                             add         R7, #1
+               
+001b ---- fa01                         cmp         R7, #TASK_COUNT
+001c ---- bef2                         bneq        /loop
+               
+                                       ; Update which tasks are ...
+001d ---- 7871                         ld          R7, [#fwCtrlExt/bvActiveTasks]
+                                       ; ... currently active ...
+001e ---- 6874                         ld          R6, [#fwCtrlExt/bvTaskInitializeReq]
+001f ---- fd0e                         or          R7, R6
+                                       ; ... and inactive ...
+0020 ---- 6876                         ld          R6, [#fwCtrlExt/bvTaskTerminateReq]
+0021 ---- ed92                         inv         R6
+0022 ---- fd06                         and         R7, R6
+0023 ---- 7c71                         st          R7, [#fwCtrlExt/bvActiveTasks]
+               
+                                       ; We're READY for another request
+0024 ---- 642d                         iobset      #IOB_EVCTL_SWEV_READY, [#IOP_EVCTL_SWEVSET]
+0025 ---- 045c                         jmp         PowerDown
+               
+               /handleReq:
+                                       ; Restore the task ID, and load the function pointer (here to avoid pipeline hazard)
+0026 ---- 786c                         ld          R7, [#fwCtrlInt/taskId]
+0027 ---- 8f1f                         ld          R0, [R7+R0]
+               
+                                       ; Skip this request?
+0028 ---- ed8f                         lsr         R6, R7
+0029 ---- ec01                         tst         R6, #0x0001
+002a ---- be01                         bnz         /noSkip
+002b ---- adb7                             rts
+               /noSkip:
+                                       ; Make the call by jump, with return (rts) in the "called" function
+002c ---- 8db7                         jmp         R0
+               
+               
+               
+               
+               AonRtcCh2Vector:
+                                       ; Start clearing the RTC event
+002d ---- 6630                         iobset      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVCLR]
+               
+                                       ; Clear the vector flag
+002e ---- 0002                         ld          R0, #(1 << 1)
+002f ---- 8b42                         out         R0, [#IOP_EVCTL_VECFLAGSCLR]
+               
+                                       ; For each task (R0 is the current task ID) ...
+0030 ---- 0000                         ld          R0, #0
+               /loop:
+                                           ; ... that is active ...
+0031 ---- 1871                             ld          R1, [#fwCtrlExt/bvActiveTasks]
+0032 ---- 9d88                             lsr         R1, R0
+0033 ---- 9c01                             tst         R1, #0x0001
+0034 ---- b60d                             bz          /skip
+               
+                                               ; Fetch number of RTC intervals until next execution
+0035 ---- 1068                                 ld          R1, #pFwTaskExecuteScheduleTable
+0036 ---- af19                                 ld          R2, [R1+R0]
+               
+                                               ; If not already 0, decrement and store. If then 0 ...
+0037 ---- aa00                                 cmp         R2, #0
+0038 ---- b609                                 beq         /skip
+0039 ---- a8ff                                 add         R2, #-1
+003a ---- af39                                 st          R2, [R1+R0]
+003b ---- be06                                 bnz         /skip
+               
+                                                   ; ... execute the task
+003c ---- 0c6c                                     st          R0, [#fwCtrlInt/taskId]
+003d ---- 886a                                     add         R0, #pFwTaskExecuteFuncTable
+003e ---- 8f08                                     ld          R0, [R0]
+                                                   ; Insert NOP to avoid pipeline hazard
+003f ---- fd47                                     nop
+0040 ---- 9db7                                     jsr         R0
+0041 ---- 086c                                     ld          R0, [#fwCtrlInt/taskId]
+               /skip:
+                                           ; Move on to the next task
+0042 ---- 8801                             add         R0, #1
+               
+0043 ---- 8a01                         cmp         R0, #TASK_COUNT
+0044 ---- beec                         bneq        /loop
+               
+                                       ; Wait for the ACK event to be cleared
+0045 ---- 262f /waitOnRtcClearing:     iobtst      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVFLAGS]
+0046 ---- aefe                         biob1       /waitOnRtcClearing
+0047 ---- 4630                         iobclr      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVCLR]
+               
+                                       ; Generate an ALERT event if needed
+0048 ---- 044e                         jmp         GenAlertEvent
+               
+               
+               
+               
+               TaskAlertAckVector:
+                                       ; Clear the vector flag
+0049 ---- 0004                         ld          R0, #(1 << 2)
+004a ---- 8b42                         out         R0, [#IOP_EVCTL_VECFLAGSCLR]
+               
+                                       ; Re-enable generation of ALERT events
+004b 86ff 03ff                         ld          R0, #0xFFFF
+004d ---- 0c70                         st          R0, [#fwCtrlInt/alertGenMask]
+               
+                                       ; Fall through to GenAlertEvent to generate another ALERT event if needed
+               
+               
+               
+               
+               GenAlertEvent:
+                                       ; Do we have any ALERT-generating events pending?
+004e ---- 786d                         ld          R7, [#fwCtrlInt/bvTaskIoAlert]
+004f ---- cd47                         ld          R4, R7
+0050 ---- 686e                         ld          R6, [#fwCtrlInt/bvTaskDoneAlert]
+0051 ---- cd0e                         or          R4, R6
+               
+                                       ; Skip if the last I/O ALERT event has not been acknowledged
+0052 ---- 5870                         ld          R5, [#fwCtrlInt/alertGenMask]
+0053 ---- cd05                         and         R4, R5
+0054 ---- b607                         bz          /skip
+               
+                                           ; Transfer I/O events from internal to external
+0055 ---- 0000                             ld          R0, #0
+0056 ---- 0c6d                             st          R0, [#fwCtrlInt/bvTaskIoAlert]
+0057 ---- 7c72                             st          R7, [#fwCtrlExt/bvTaskIoAlert]
+               
+                                           ; Transfer done events from internal to external
+0058 ---- 0c6e                             st          R0, [#fwCtrlInt/bvTaskDoneAlert]
+0059 ---- 6c73                             st          R6, [#fwCtrlExt/bvTaskDoneAlert]
+               
+                                           ; Generate the ALERT event, and clear the generation mask
+005a ---- 652d                             iobset      #IOB_EVCTL_SWEV_ALERT, [#IOP_EVCTL_SWEVSET]
+005b ---- 0c70                             st          R0, [#fwCtrlInt/alertGenMask]
+               /skip:
+                                       ; Fall through to PowerDown ...
+               
+               
+               
+               
+               UnusedVector:
+                                       ; Fall through to PowerDown ...
+               
+               
+               
+               
+               PowerDown:
+                                       ; If there are no unacknowledged ALERTs and no vectors pending ...
+005c ---- 7870                         ld          R7, [#fwCtrlInt/alertGenMask]
+005d ---- f801                         add         R7, #1 ; 0xFFFF -> 0x0000
+005e ---- e92b                         in          R6, [#IOP_EVCTL_VECFLAGS]
+005f ---- fd0e                         or          R7, R6
+0060 ---- be01                         bnz         /noPowerDown
+               
+                                           ; Assert the power-down request. We'll make sure that it has taken effect
+                                           ; or been completely ignored when waking up again
+0061 ---- 6436                             iobset      #0, [#IOP_WUC_PWRDWNREQ]
+               /noPowerDown:
+                                       ; Sleep until the next event
+0062 ---- bdb7                         sleep
+               
+               
+               
+               
+0063 ---- 241a AdiDdiAcquire:          iobtst      #0, [#IOP_SMPH_SMPH0]
+0064 ---- a6fe                         biob0       AdiDdiAcquire
+0065 ---- adb7                         rts
+               
+0066 ---- 641a AdiDdiRelease:          iobset      #0, [#IOP_SMPH_SMPH0]
+0067 ---- adb7                         rts
+               
+               
+               
+               
+               pFwTaskExecuteScheduleTable:
+0068 ---- 0000                         dw          #0
+               pFwTaskInitializeFuncTable:
+0069 ---- 007c                         dw          #dustSensor/initialize
+               pFwTaskExecuteFuncTable:
+006a ---- 007f                         dw          #dustSensor/execute
+               pFwTaskTerminateFuncTable:
+006b ---- 00a6                         dw          #dustSensor/terminate
+               
+               
+               ; Internal control data
+               fwCtrlInt:
+006c ---- 0000 /taskId:                dw          #0      ; ID of the currently running task
+006d ---- 0000 /bvTaskIoAlert:         dw          #0x0000 ; LSB = Normal data exchange, MSB = Overflow or underflow
+006e ---- 0000 /bvTaskDoneAlert:       dw          #0x0000 ; LSB = Task execution stopped spontaneously or after hint
+006f ---- 0000 /bvTaskStopReq:         dw          #0x0000 ; LSB = Stop hint, cleared when the task stops
+0070 ---- ffff /alertGenMask:          dw          #0xFFFF ; ALERT event generation mask (0xFFFF = can, 0x0000 = cannot)
+               
+               
+               ; External control data, shared with the driver
+               fwCtrlExt:
+0071 ---- 0000 /bvActiveTasks:         dw          #0x0000 ; Indicates which tasks are currently active
+0072 ---- 0000 /bvTaskIoAlert:         dw          #0x0000 ; LSB = Normal data exchange, MSB = Overflow or underflow
+0073 ---- 0000 /bvTaskDoneAlert:       dw          #0x0000 ; Task completed normally
+0074 ---- 0000 /bvTaskInitializeReq:   dw          #0x0000 ; Requests tasks to start
+0075 ---- 0000 /bvTaskExecuteReq:      dw          #0x0000 ; Requests tasks to execute once immediately
+0076 ---- 0000 /bvTaskTerminateReq:    dw          #0x0000 ; Requests tasks to stop
+               
+               
+               .segment end "Framework"
+               
+               
+               fwTaskDataStructures:
+               .segment begin "Task: Dust Sensor"
+               dustSensor/cfg:
+               dustSensor/input:
+               dustSensor/output:
+               dustSensor/output/lpo1um:
+0077 ---- 0000                         dw          #0
+               dustSensor/output/lpo25um:
+0078 ---- 0000                         dw          #0
+               dustSensor/state:
+               dustSensor/state/count1um:
+0079 ---- 0000                         dw          #0
+               dustSensor/state/count25um:
+007a ---- 0000                         dw          #0
+               dustSensor/state/counter:
+007b ---- 0000                         dw          #0
+               .segment end "Task: Dust Sensor"
+               
+               
+               .segment begin "Task: Dust Sensor"
+               
+               
+               
+               
+               dustSensor/initialize:
+               ;? // Schedule the first execution
+               ;? fwScheduleTask(1);
+007c ---- 7001                         ld          R7, #1
+007d ---- 14a7                         jsr         FwScheduleTask
+               dustSensor/initializeDone:
+007e ---- adb7                         rts         
+               
+               
+               
+               
+               dustSensor/execute:
+               ;? U16 input1um;
+               ;? U16 input25um;
+               ;? 
+               ;? gpioGetInputValue(AUXIO_I_LPO_1UM;input1um);
+007f ---- 5006                         ld          R5, #6
+0080 ---- 14ab                         jsr         gpioGetInputValue
+0081 ---- 8d47                         ld          R0, R7
+               ;? gpioGetInputValue(AUXIO_I_LPO_2_5UM;input25um);
+0082 ---- 5005                         ld          R5, #5
+0083 ---- 14ab                         jsr         gpioGetInputValue
+               ;? 
+               ;? if (input1um == 0) {
+0084 ---- 8a00                         cmp         R0, #0
+0085 ---- be03                         bneq        /id0096
+               ;?   state.count1um = state.count1um + 1;
+0086 ---- 0879                             ld          R0, [#dustSensor/state/count1um]
+0087 ---- 8801                             add         R0, #1
+0088 ---- 0c79                             st          R0, [#dustSensor/state/count1um]
+               ;? }
+               /id0096:
+               ;? 
+               ;? if (input25um == 0) {
+0089 ---- fa00                         cmp         R7, #0
+008a ---- be06                         bneq        /id0099
+               ;?   state.count1um = state.count1um - 1;
+008b ---- 0879                             ld          R0, [#dustSensor/state/count1um]
+008c ---- 88ff                             add         R0, #-1
+008d ---- 0c79                             st          R0, [#dustSensor/state/count1um]
+               ;?   state.count25um = state.count25um + 1;
+008e ---- 087a                             ld          R0, [#dustSensor/state/count25um]
+008f ---- 8801                             add         R0, #1
+0090 ---- 0c7a                             st          R0, [#dustSensor/state/count25um]
+               ;? }
+               /id0099:
+               ;? 
+               ;? state.counter = state.counter + 1;
+0091 ---- 087b                         ld          R0, [#dustSensor/state/counter]
+0092 ---- 8801                         add         R0, #1
+0093 ---- 0c7b                         st          R0, [#dustSensor/state/counter]
+               ;? 
+               ;? if (state.counter == 65535) {
+0094 ---- 087b                         ld          R0, [#dustSensor/state/counter]
+0095 86ff 8aff                         cmp         R0, #65535
+0097 ---- be0b                         bneq        /id0104
+               ;?   output.lpo1um = state.count1um;
+0098 ---- 0879                             ld          R0, [#dustSensor/state/count1um]
+0099 ---- 0c77                             st          R0, [#dustSensor/output/lpo1um]
+               ;?   output.lpo25um = state.count25um;
+009a ---- 087a                             ld          R0, [#dustSensor/state/count25um]
+009b ---- 0c78                             st          R0, [#dustSensor/output/lpo25um]
+               ;?   state.counter = 0;
+009c ---- 0000                             ld          R0, #0
+009d ---- 0c7b                             st          R0, [#dustSensor/state/counter]
+               ;?   state.count1um = 0;
+009e ---- 0000                             ld          R0, #0
+009f ---- 0c79                             st          R0, [#dustSensor/state/count1um]
+               ;?   state.count25um = 0;
+00a0 ---- 0000                             ld          R0, #0
+00a1 ---- 0c7a                             st          R0, [#dustSensor/state/count25um]
+               ;?   fwGenAlertInterrupt();
+00a2 ---- 14b2                             jsr         FwGenAlertInterrupt
+               ;? }
+               /id0104:
+               ;? 
+               ;? fwScheduleTask(1);
+00a3 ---- 7001                         ld          R7, #1
+00a4 ---- 14a7                         jsr         FwScheduleTask
+               dustSensor/executeDone:
+00a5 ---- adb7                         rts         
+               
+               
+               
+               
+               dustSensor/terminate:
+               dustSensor/terminateDone:
+00a6 ---- adb7                         rts         
+               .segment end "Task: Dust Sensor"
+               
+               
+               .segment begin "Procedure Libary"
+               ; PARAMETERS:
+               ;     R7 = Number of ticks until next execution
+               ;
+               ; CLOBBERS:
+               ;     R6
+               FwScheduleTask:
+                                       ; Set the scheduling counter for the task
+00a7 ---- 686c                         ld          R6, [#fwCtrlInt/taskId]
+00a8 ---- e868                         add         R6, #pFwTaskExecuteScheduleTable
+00a9 ---- ff2e                         st          R7, [R6]
+00aa ---- adb7                         rts
+               
+               
+               
+               
+               ; PARAMETERS:
+               ;     R5 = AUX I/O index
+               ;
+               ; CLOBBERS:
+               ;     R6, R7
+               gpioGetInputValue:
+                                       ; Get GPIOs 15:8
+00ab ---- e913                         in          R6, [#IOP_AIODIO1_GPIODIN]
+00ac ---- eda0                         lsl         R6, #8
+               
+                                       ; Get GPIOs 7:0 and combine
+00ad ---- f912                         in          R7, [#IOP_AIODIO0_GPIODIN]
+00ae ---- fd0e                         or          R7, R6
+               
+                                       ; Move the desired GPIO pin value into bit 0 and mask
+00af ---- fd8d                         lsr         R7, R5
+00b0 ---- f001                         and         R7, #0x0001
+00b1 ---- adb7                         rts
+               
+               
+               
+               
+               ; CLOBBERS:
+               ;     R6, R7
+               FwGenAlertInterrupt:
+                                       ; Create a task ID vector ...
+00b2 ---- 786c                         ld          R7, [#fwCtrlInt/taskId]
+00b3 ---- 6001                         ld          R6, #1
+00b4 ---- ed87                         lsl         R6, R7
+               
+                                       ; Modify the event vector
+00b5 ---- 786d                         ld          R7, [#fwCtrlInt/bvTaskIoAlert]
+00b6 ---- fd0e                         or          R7, R6
+00b7 ---- 7c6d                         st          R7, [#fwCtrlInt/bvTaskIoAlert]
+00b8 ---- adb7                         rts
+               .segment end "Procedure Libary"

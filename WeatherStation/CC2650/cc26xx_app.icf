@@ -1,0 +1,336 @@
+/*******************************************************************************
+  Filename:       cc26xx_app.icf
+  Revised:        $Date: 2015-02-02 12:33:20 -0800 (Mon, 02 Feb 2015) $
+  Revision:       $Revision: 42230 $
+
+  Description:    IAR ARM Linker Configuration File - ZStack Generic Application
+
+  Imported Symbols
+  Note: Linker defines are located in the IAR IDE project using --config_def
+        in Options->Linker->Extra Options.
+
+  CCxxxx:            Device Name (e.g. CC2650)
+  ICALL_STACK0_ADDR: Start address of flash only and flash ROM builds.
+  ICALL_RAM0_ADDR:   Start address of RAM.
+
+  Exported Symbols
+  Note: Can be used as externs in C code.
+
+  STACK_TOP: Location of the top of RAM.
+
+  Copyright 2014 - 2015 Texas Instruments Incorporated. All rights reserved.
+
+  IMPORTANT: Your use of this Software is limited to those specific rights
+  granted under the terms of a software license agreement between the user
+  who downloaded the software, his/her employer (which must be your employer)
+  and Texas Instruments Incorporated (the "License").  You may not use this
+  Software unless you agree to abide by the terms of the License. The License
+  limits your use, and you acknowledge, that the Software may not be modified,
+  copied or distributed unless embedded on a Texas Instruments microcontroller
+  or used solely and exclusively in conjunction with a Texas Instruments radio
+  frequency transceiver, which is integrated into your product.  Other than for
+  the foregoing purpose, you may not use, reproduce, copy, prepare derivative
+  works of, modify, distribute, perform, display or sell this Software and/or
+  its documentation for any purpose.
+
+  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
+  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
+  NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
+  TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
+  NEGLIGENCE, STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER
+  LEGAL EQUITABLE THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES
+  INCLUDING BUT NOT LIMITED TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE
+  OR CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT
+  OF SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
+  (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
+
+  Should you have any questions regarding your right to use this Software,
+  contact Texas Instruments Incorporated at www.TI.com.
+*******************************************************************************/
+
+////////////////////////////////////////////////////////////////////////////////
+// Memory Sizes
+////////////////////////////////////////////////////////////////////////////////
+
+if ( isdefinedsymbol(CC2630) ||
+     isdefinedsymbol(CC2650) )
+{
+  define symbol RAM_SIZE            = 0x00005000;  // 20K
+  define symbol FLASH_SIZE          = 0x00020000;  // 128K
+  define symbol ROM_SIZE            = 0x0001C000;  // 115K
+}
+////////////////////////////////////////////////////////////////////////////////
+// Default
+else
+{
+  define symbol RAM_SIZE            = 0x00004000;  // 16K
+  define symbol FLASH_SIZE          = 0x00020000;  // 128K
+  define symbol ROM_SIZE            = 0x00018000;  // 96K
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Memory Definitions
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// RAM
+//
+
+define symbol RAM_START             = 0x20000000;
+
+if ( isdefinedsymbol(CC2650) )
+{
+  if ( isdefinedsymbol(ICALL_RAM0_ADDR) )
+  {
+    define symbol RAM_END           = (ICALL_RAM0_ADDR-1);
+  }
+  else // default
+  {
+    define symbol RAM_END           = 0x200037FF;
+  }
+}
+else // CC2650 PG1
+{
+  if ( isdefinedsymbol(ICALL_RAM0_ADDR) )
+  {
+    define symbol RAM_END           = (ICALL_RAM0_ADDR-1);
+  }
+  else // default
+  {
+    define symbol RAM_END             = 0x200029FF;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Flash
+//
+
+define symbol FLASH_START           = 0x00000000;
+
+if ( isdefinedsymbol(ICALL_STACK0_ADDR) )
+{
+  define symbol FLASH_END           = (ICALL_STACK0_ADDR-1);
+}
+else // default
+{
+  define symbol FLASH_END           = 0x00007FFF;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Stack
+//
+
+define symbol STACK_SIZE           = 0x200;
+define symbol STACK_START          = RAM_END + 1;
+define symbol STACK_END            = STACK_START - STACK_SIZE;
+define block CSTACK with alignment = 8, size = STACK_SIZE { section .stack };
+//
+define symbol STACK_TOP            = RAM_END + 1;
+export symbol STACK_TOP;
+
+////////////////////////////////////////////////////////////////////////////////
+// Heap
+//
+
+define symbol HEAP_SIZE            = 0x1000;
+define block  HEAP with alignment  = 8, size = HEAP_SIZE { };
+
+////////////////////////////////////////////////////////////////////////////////
+// Flash Interrupt Vector Table
+//
+
+define symbol INTVEC_NUM_ENTRIES   = 50 + 1; // first entry is stack location
+define symbol INTVEC_SIZE          = INTVEC_NUM_ENTRIES + 4;
+
+////////////////////////////////////////////////////////////////////////////////
+// Customer Configuration Area (CCA)
+//
+
+define symbol CCA_NUM_ENTRIES      = 21;
+define symbol CCA_SIZE             = (CCA_NUM_ENTRIES * 4);
+define symbol CCA_START            = (FLASH_SIZE-1) - CCA_SIZE + 1;
+define symbol CCA_END              = (FLASH_SIZE-1);
+
+////////////////////////////////////////////////////////////////////////////////
+// Memory Regions
+////////////////////////////////////////////////////////////////////////////////
+
+define memory mem with size = 4G;
+
+define region RAM        = mem:[from RAM_START   to RAM_END];
+define region FLASH      = mem:[from FLASH_START to FLASH_END];
+define region FLASH_CCA  = mem:[from CCA_START   to CCA_END];
+
+////////////////////////////////////////////////////////////////////////////////
+// Memory Placement
+////////////////////////////////////////////////////////////////////////////////
+
+// CCA
+place at start of FLASH_CCA { readonly section .ccfg };
+keep                        { readonly section .ccfg};
+
+// Interrupt Vector Table
+place at address mem:FLASH_START { readonly section .intvec };
+keep                             { readonly section .intvec };
+
+// RAM Vector Table
+place at start of RAM { section .vtable_ram };
+
+// Stack
+place at end of RAM { block CSTACK };
+
+// Heap
+place in RAM { block HEAP };
+
+place in FLASH { readonly };
+place in RAM   { readwrite };
+
+////////////////////////////////////////////////////////////////////////////////
+// Initialization
+////////////////////////////////////////////////////////////////////////////////
+
+initialize by copy { readwrite };
+
+do not initialize
+{
+  section .noinit,
+  section .stack,
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+if ( isdefinedsymbol(USE_SYSBIOS_IN_ROM) )
+{
+  place at address mem:0x0000058c {readonly section .const_xdc_runtime_Error_policy__C};
+  place at address mem:0x00000538 {readonly section .const_xdc_runtime_IModule_Interface__BASE__C};
+  place at address mem:0x0000051c {readonly section .const_xdc_runtime_Startup_lastFxns__C};
+  place at address mem:0x00000310 {readonly section .const_ti_sysbios_gates_GateMutex_Object__DESC__C};
+  place at address mem:0x000005ac {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_initDevice__I};
+  place at address mem:0x0000054c {readonly section .const_xdc_runtime_Startup_execImpl__C};
+  place at address mem:0x000005cc {readonly section .const_ti_sysbios_gates_GateMutex_Instance_State_sem__O};
+  place at address mem:0x000005a8 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_getMaxTicks__E};
+  place at address mem:0x000004dc {readonly section .const_ti_sysbios_knl_Swi_Object__count__C};
+  place at address mem:0x00000478 {readonly section .const_ti_sysbios_knl_Idle_funcList__C};
+  place at address mem:0x00000170 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_Object__PARAMS__C};
+  place at address mem:0x0000058a {readonly section .const_xdc_runtime_Text_isLoaded__C};
+  place at address mem:0x00000370 {readonly section .const_ti_sysbios_knl_Clock_Object__DESC__C};
+  place at address mem:0x00000480 {readonly section .const_ti_sysbios_family_arm_cc26xx_Boot_alternateBackdoorIOID__C};
+  place at address mem:0x000005d4 {readonly section .const_ti_sysbios_knl_Mailbox_Instance_State_dataQue__O};
+  place at address mem:0x00000240 {readonly section .const_ti_sysbios_gates_GateMutex_Module__FXNS__C};
+  place at address mem:0x000005e8 {readonly section .const_ti_sysbios_knl_Task_Module_State_inactiveQ__O};
+  place at address mem:0x00000506 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_Module__id__C};
+  place at address mem:0x00000502 {readonly section .const_ti_sysbios_family_arm_cc26xx_Timer_Module__id__C};
+  place at address mem:0x000004d0 {readonly section .const_ti_sysbios_knl_Mailbox_Object__table__C};
+  place at address mem:0x00000498 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_Object__table__C};
+  place at address mem:0x000003f0 {readonly section .const_ti_sysbios_knl_Swi_Object__DESC__C};
+  place at address mem:0x00000588 {readonly section .const_xdc_runtime_Text_charCnt__C};
+  place at address mem:0x000005b8 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_start__E};
+  place at address mem:0x000004c0 {readonly section .const_ti_sysbios_heaps_HeapMem_Object__table__C};
+  place at address mem:0x0000052c {readonly section .const_xdc_runtime_Error_policyFxn__C};
+  place at address mem:0x000005a0 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_getCount64__E};
+  place at address mem:0x00000514 {readonly section .const_xdc_runtime_Startup_firstFxns__C};
+  place at address mem:0x000001f4 {readonly section .const_ti_sysbios_knl_Swi_Object__PARAMS__C};
+  place at address mem:0x000004c8 {readonly section .const_ti_sysbios_knl_Clock_serviceMargin__C};
+  place at address mem:0x00000574 {readonly section .const_xdc_runtime_Text_charTab__C};
+  place at address mem:0x00000598 {readonly section .const_ti_sysbios_rom_ROM_AONRTCCurrentCompareValueGet};
+  place at address mem:0x000005bc {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_TimestampProvider_get32__E};
+  place at address mem:0x000005a4 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_getCurrentTick__E};
+  place at address mem:0x000004b0 {readonly section .const_ti_sysbios_family_arm_m3_TaskSupport_stackAlignment__C};
+  place at address mem:0x00000490 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_NUM_INTERRUPTS__C};
+  place at address mem:0x00000544 {readonly section .const_xdc_runtime_Main_Module__diagsMask__C};
+  place at address mem:0x000004e0 {readonly section .const_ti_sysbios_knl_Swi_Object__table__C};
+  place at address mem:0x00000500 {readonly section .const_ti_sysbios_family_arm_cc26xx_Boot_overrideDefaultBackdoorIOID__C};
+  place at address mem:0x00000586 {readonly section .const_xdc_runtime_Memory_Module__id__C};
+  place at address mem:0x00000100 {readonly section .const_ti_sysbios_knl_Task_Object__PARAMS__C};
+  place at address mem:0x00000448 {readonly section .const_ti_sysbios_gates_GateMutex_Object__PARAMS__C};
+  place at address mem:0x000004b8 {readonly section .const_ti_sysbios_heaps_HeapMem_Module__gateObj__C};
+  place at address mem:0x00000484 {readonly section .const_ti_sysbios_family_arm_cc26xx_Timer_startupNeeded__C};
+  place at address mem:0x000003b0 {readonly section .const_ti_sysbios_knl_Queue_Object__DESC__C};
+  place at address mem:0x00000410 {readonly section .const_ti_sysbios_knl_Task_Object__DESC__C};
+  place at address mem:0x00000524 {readonly section .const_xdc_runtime_Assert_E_assertFailed__C};
+  place at address mem:0x00000264 {readonly section .const_ti_sysbios_heaps_HeapMem_Object__PARAMS__C};
+  place at address mem:0x00000508 {readonly section .const_ti_sysbios_gates_GateHwi_Module__id__C};
+  place at address mem:0x00000430 {readonly section .const_ti_sysbios_gates_GateHwi_Object__PARAMS__C};
+  place at address mem:0x00000534 {readonly section .const_xdc_runtime_IHeap_Interface__BASE__C};
+  place at address mem:0x00000564 {readonly section .const_xdc_runtime_SysCallback_exitFxn__C};
+  place at address mem:0x0000050c {readonly section .const_ti_sysbios_heaps_HeapMem_Module__id__C};
+  place at address mem:0x000004a0 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_excHandlerFunc__C};
+  place at address mem:0x000001cc {readonly section .const_ti_sysbios_heaps_HeapMem_Module__FXNS__C};
+  place at address mem:0x00000570 {readonly section .const_xdc_runtime_System_maxAtexitHandlers__C};
+  place at address mem:0x000004d4 {readonly section .const_ti_sysbios_knl_Queue_Object__count__C};
+  place at address mem:0x000004ec {readonly section .const_ti_sysbios_knl_Task_Object__table__C};
+  place at address mem:0x00000390 {readonly section .const_ti_sysbios_knl_Mailbox_Object__DESC__C};
+  place at address mem:0x000004a4 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_nullIsrFunc__C};
+  place at address mem:0x00000510 {readonly section .const_ti_sysbios_knl_Clock_tickMode__C};
+  place at address mem:0x0000050a {readonly section .const_ti_sysbios_gates_GateMutex_Module__id__C};
+  place at address mem:0x000004e4 {readonly section .const_ti_sysbios_knl_Swi_numPriorities__C};
+  place at address mem:0x000004fc {readonly section .const_ti_sysbios_knl_Task_numConstructedTasks__C};
+  place at address mem:0x00000550 {readonly section .const_xdc_runtime_Startup_maxPasses__C};
+  place at address mem:0x0000059c {readonly section .const_ti_sysbios_rom_ROM_AONRTCEventClear};
+  place at address mem:0x0000050e {readonly section .const_ti_sysbios_knl_Task_initStackFlag__C};
+  place at address mem:0x0000053c {readonly section .const_xdc_runtime_Main_Module__diagsEnabled__C};
+  place at address mem:0x00000540 {readonly section .const_xdc_runtime_Main_Module__diagsIncluded__C};
+  place at address mem:0x00000568 {readonly section .const_xdc_runtime_System_abortFxn__C};
+  place at address mem:0x000005d8 {readonly section .const_ti_sysbios_knl_Mailbox_Instance_State_dataSem__O};
+  place at address mem:0x0000021c {readonly section .const_ti_sysbios_gates_GateHwi_Module__FXNS__C};
+  place at address mem:0x00000330 {readonly section .const_ti_sysbios_hal_Hwi_Object__DESC__C};
+  place at address mem:0x000004ac {readonly section .const_ti_sysbios_family_arm_m3_Hwi_priGroup__C};
+  place at address mem:0x00000528 {readonly section .const_xdc_runtime_Error_E_memory__C};
+  place at address mem:0x00000488 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_E_alreadyDefined__C};
+  place at address mem:0x000005e0 {readonly section .const_ti_sysbios_knl_Mailbox_Instance_State_freeSem__O};
+  place at address mem:0x000004d8 {readonly section .const_ti_sysbios_knl_Queue_Object__table__C};
+  place at address mem:0x000002ac {readonly section .const_ti_sysbios_knl_Semaphore_Object__PARAMS__C};
+  place at address mem:0x0000056c {readonly section .const_xdc_runtime_System_exitFxn__C};
+  place at address mem:0x00000288 {readonly section .const_ti_sysbios_knl_Clock_Object__PARAMS__C};
+  place at address mem:0x00000594 {readonly section .const_ti_sysbios_rom_ROM_AONRTCCompareValueSet};
+  place at address mem:0x000005b0 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_setNextTick__E};
+  place at address mem:0x000004c4 {readonly section .const_ti_sysbios_heaps_HeapMem_reqAlign__C};
+  place at address mem:0x00000584 {readonly section .const_xdc_runtime_Main_Module__id__C};
+  place at address mem:0x00000554 {readonly section .const_xdc_runtime_Startup_sfxnRts__C};
+  place at address mem:0x000003d0 {readonly section .const_ti_sysbios_knl_Semaphore_Object__DESC__C};
+  place at address mem:0x000002f0 {readonly section .const_ti_sysbios_gates_GateHwi_Object__DESC__C};
+  place at address mem:0x000004bc {readonly section .const_ti_sysbios_heaps_HeapMem_Object__count__C};
+  place at address mem:0x000004a8 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_numSparseInterrupts__C};
+  place at address mem:0x00000504 {readonly section .const_ti_sysbios_family_arm_cc26xx_TimestampProvider_useClockTimer__C};
+  place at address mem:0x000005c8 {readonly section .const_ti_sysbios_rom_ROM_xdc_runtime_System_SupportProxy_exit__E};
+  place at address mem:0x00000460 {readonly section .const_ti_sysbios_knl_Queue_Object__PARAMS__C};
+  place at address mem:0x000004f0 {readonly section .const_ti_sysbios_knl_Task_allBlockedFunc__C};
+  place at address mem:0x000005c4 {readonly section .const_ti_sysbios_rom_ROM_xdc_runtime_System_SupportProxy_abort__E};
+  place at address mem:0x000004cc {readonly section .const_ti_sysbios_knl_Mailbox_Object__count__C};
+  place at address mem:0x0000057c {readonly section .const_xdc_runtime_Text_nameStatic__C};
+  place at address mem:0x000005c0 {readonly section .const_ti_sysbios_rom_ROM_xdc_runtime_Startup_getState__I};
+  place at address mem:0x000005d0 {readonly section .const_ti_sysbios_knl_Clock_Module_State_clockQ__O};
+  place at address mem:0x000004f8 {readonly section .const_ti_sysbios_knl_Task_defaultStackSize__C};
+  place at address mem:0x00000530 {readonly section .const_xdc_runtime_IGateProvider_Interface__BASE__C};
+  place at address mem:0x0000048c {readonly section .const_ti_sysbios_family_arm_m3_Hwi_E_hwiLimitExceeded__C};
+  place at address mem:0x0000055c {readonly section .const_xdc_runtime_Startup_startModsFxn__C};
+  place at address mem:0x000005e4 {readonly section .const_ti_sysbios_knl_Semaphore_Instance_State_pendQ__O};
+  place at address mem:0x000002d0 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_Object__DESC__C};
+  place at address mem:0x00000578 {readonly section .const_xdc_runtime_Text_nameEmpty__C};
+  place at address mem:0x00000494 {readonly section .const_ti_sysbios_family_arm_m3_Hwi_Object__count__C};
+  place at address mem:0x00000560 {readonly section .const_xdc_runtime_SysCallback_abortFxn__C};
+  place at address mem:0x000004f4 {readonly section .const_ti_sysbios_knl_Task_defaultStackHeap__C};
+  place at address mem:0x0000049c {readonly section .const_ti_sysbios_family_arm_m3_Hwi_ccr__C};
+  place at address mem:0x0000013c {readonly section .const_ti_sysbios_knl_Mailbox_Object__PARAMS__C};
+  place at address mem:0x000001a0 {readonly section .const_ti_sysbios_hal_Hwi_Object__PARAMS__C};
+  place at address mem:0x000004b4 {readonly section .const_ti_sysbios_heaps_HeapMem_E_memory__C};
+  place at address mem:0x000004e8 {readonly section .const_ti_sysbios_knl_Task_Object__count__C};
+  place at address mem:0x00000590 {readonly section .const_ti_sysbios_rom_ROM_AONRTCChannelEnable};
+  place at address mem:0x00000350 {readonly section .const_ti_sysbios_heaps_HeapMem_Object__DESC__C};
+  place at address mem:0x00000580 {readonly section .const_xdc_runtime_Text_nameUnknown__C};
+  place at address mem:0x00000548 {readonly section .const_xdc_runtime_Memory_defaultHeapInstance__C};
+  place at address mem:0x000005dc {readonly section .const_ti_sysbios_knl_Mailbox_Instance_State_freeQue__O};
+  place at address mem:0x000005b4 {readonly section .const_ti_sysbios_rom_ROM_ti_sysbios_family_arm_cc26xx_Timer_setThreshold__I};
+  place at address mem:0x00000558 {readonly section .const_xdc_runtime_Startup_sfxnTab__C};
+  place at address mem:0x20000178 {readwrite section .data_ti_sysbios_knl_Clock_Module__state__V};
+  place at address mem:0x200001ec {readwrite section .data_ti_sysbios_family_arm_cc26xx_TimestampProvider_Module__state__V};
+  place at address mem:0x200001f0 {readwrite section .data_xdc_runtime_Startup_Module__state__V};
+  place at address mem:0x200001a4 {readwrite section .data_ti_sysbios_BIOS_Module__state__V};
+  place at address mem:0x200001c8 {readwrite section .data_ti_sysbios_knl_Swi_Module__state__V};
+  place at address mem:0x20000100 {readwrite section .data_ti_sysbios_knl_Task_Module__state__V};
+  place at address mem:0x20000200 {readwrite section .data_xdc_runtime_Memory_Module__state__V};
+  place at address mem:0x200001f8 {readwrite section .data_xdc_runtime_System_Module__state__V};
+  place at address mem:0x20000144 {readwrite section .data_ti_sysbios_family_arm_m3_Hwi_Module__state__V};
+  place at address mem:0x200001e4 {readwrite section .data_ti_sysbios_family_arm_cc26xx_Timer_Module__state__V};
+}

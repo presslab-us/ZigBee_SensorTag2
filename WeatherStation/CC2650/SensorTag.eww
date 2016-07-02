@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<workspace>
+  <project>
+    <path>$WS_DIR$\SensorTag.ewp</path>
+  </project>
+  <project>
+    <path>$WS_DIR$\..\..\..\Core\Thread\CC26xx\ZStackCore.ewp</path>
+  </project>
+  <batchBuild>
+    <batchDefinition>
+      <name>All</name>
+      <member>
+        <project>SensorTag</project>
+        <configuration>SensorTag</configuration>
+      </member>
+      <member>
+        <project>ZStackCore</project>
+        <configuration>EndDevice</configuration>
+      </member>
+    </batchDefinition>
+  </batchBuild>
+</workspace>
+
+

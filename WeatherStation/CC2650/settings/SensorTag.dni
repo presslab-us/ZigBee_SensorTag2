@@ -1,0 +1,92 @@
+[Stack]
+FillEnabled=0
+OverflowWarningsEnabled=1
+WarningThreshold=90
+SpWarningsEnabled=1
+WarnLogOnly=1
+UseTrigger=1
+TriggerName=main
+LimitSize=0
+ByteLimit=50
+[XdsDriver]
+CStepIntDis=_ 0
+[xds100]
+xdsResetStyle=2
+xdsResetStrategy=3
+[DebugChecksum]
+Checksum=-1889945060
+[Exceptions]
+StopOnUncaught=_ 0
+StopOnThrow=_ 0
+[CallStack]
+ShowArgs=0
+[Disassembly]
+MixedMode=1
+[PlDriver]
+MemConfigValue=C:\Program Files\IAR Systems\Embedded Workbench 7.2\arm\CONFIG\debugger\TexasInstruments\CC2650F128.ddf
+[Jet]
+DisableInterrupts=0
+MultiCoreRunAll=0
+JetConnSerialNo=59065
+JetConnFoundProbes=
+[ArmDriver]
+EnableCache=1
+[PlDdfRanges]
+ConfigRanges0=Memory ROM 268435456 131072 1
+ConfigRanges1=Memory Peripherals 1073741824 925696 2
+ConfigRanges2=Memory FCFG1 1342181376 1024 1
+ConfigRanges3=Memory FCFG2 1342185472 1024 1
+ConfigRanges4=Memory CCFG 1342189568 4096 1
+ConfigRanges5=Memory SystemSFR 3758096384 1048576 2
+ConfigRanges6=Memory Flash 0 131072 1
+ConfigRanges7=Memory GPRAM 285212672 8192 0
+ConfigRanges8=Memory RAM 536870912 20480 0
+ConfigRanges9=Memory RFC_RAM 553648128 4096 0
+[PlCacheRanges]
+CustomRanges0=0 0 131072 1 0
+CustomRangesText0=
+CustomRanges1=0 268435456 131072 1 0
+CustomRangesText1=
+CustomRanges2=0 285212672 8192 0 0
+CustomRangesText2=
+CustomRanges3=0 536870912 20480 0 0
+CustomRangesText3=
+CustomRanges4=0 553648128 4096 0 0
+CustomRangesText4=
+CustomRanges5=0 570425344 33554432 0 0
+CustomRangesText5=bit-banding
+CustomRanges6=0 1073741824 925696 2 0
+CustomRangesText6=
+CustomRanges7=0 1107296256 33554432 2 0
+CustomRangesText7=bit-banding
+CustomRanges8=0 1342181376 1024 1 0
+CustomRangesText8=
+CustomRanges9=0 1342185472 1024 1 0
+CustomRangesText9=
+CustomRanges10=0 1342189568 4096 1 0
+CustomRangesText10=
+CustomRanges11=0 3758096384 1048576 2 0
+CustomRangesText11=
+[CallStackLog]
+Enabled=0
+[CallStackStripe]
+ShowTiming=1
+[Disassemble mode]
+mode=0
+[Breakpoints2]
+Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\sensortagapp.c}.2729.3" 0 0 1 "" 0 "" 0
+Count=1
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
+[TermIOLog]
+LoggingEnabled=_ 0
+LogFile=_ ""
+[Aliases]
+A0=_ "C:\Program Files\IAR Systems\Embedded Workbench 7.2\arm\inc\c\DLib_Product_string.h" ""
+A1=_ "C:\hudson\workspace\FWGroup-DriverLib\modules\output\cc26xx_cha_2_0_ext\driverlib\cpu.c" ""
+A2=_ "C:\ti\simplelink\zstack_home_1_02_02_42930\Projects\zstack\HomeAutomation\WeatherStation\CC2650\main.c" ""
+A3=_ "C:\ti\tirtos_simplelink_2_11_01_09\products\cc26xxware_2_00_06_14829\driverlib\crypto.h" ""
+Count=4
+SuppressDialog=0

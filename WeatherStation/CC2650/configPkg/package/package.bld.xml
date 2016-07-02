@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!--  This file conforms to the DTD xdc/bld/build.dtd -->
+<package name="configPkg" version="" producerId="undefined">
+    <units>
+    </units>
+    <sources>
+        <srcFile name="package/cfg/app_prm3.c"/>
+    </sources>
+    <configscripts>
+        <srcFile name="Z:/ti/simplelink/zstack_home_1_02_02a_44539/Projects/zstack/HomeAutomation/WeatherStation/CC2650/app.cfg"/>
+    </configscripts>
+    <makefiles>
+        <srcFile name="package.mak" src="package.bld"/>
+        <srcFile name="package/package.xdc.dep" src="package.xdc"/>
+        <srcFile name="package/cfg/app_prm3.mak" src="package.bld"/>
+        <srcFile name="package/cfg/app_prm3.orm3.dep" src="package/cfg/app_prm3.c"/>
+        <srcFile name="package/cfg/app_prm3.dep" src="package/cfg/app_prm3.cfg"/>
+        <srcFile name="package/cfg/app.xrm3.mak" src="package.bld"/>
+        <srcFile name="package/rel/configPkg.tar.dep" src="package/rel/configPkg.xdc.inc"/>
+    </makefiles>
+    <targets>
+        <target name="iar.targets.arm.M3"
+            version="iar.targets.arm.M3{1,0,7.40,3"
+            rawVersion="7.40.3.8902"
+            platform="ti.platforms.tiva:LM3S9B92:1"
+            isa="v7M"
+            suffix="rm3"
+            rootDir="C:/PROGRA~2/IARSYS~1/EMBEDD~1.2/arm"
+            os="undefined"
+            rts="iar.targets.arm.rts">
+            <model endian="little"
+                codeModel="thumb2"
+                dataModel="undefined"/>
+        </target>
+    </targets>
+    <libraries>
+    </libraries>
+    <configurations>
+    <configuration name="app"
+        pname="app.prm3"
+        target="iar.targets.arm.M3"
+        platform="ti.platforms.simplelink:CC2650F128"
+        profile="release"
+        isPartial="false"
+        xCfgScript="package/cfg/app_prm3.cfg"
+        xCfgPrefix="package/cfg/app_prm3"
+        cfgScript="Z:/ti/simplelink/zstack_home_1_02_02a_44539/Projects/zstack/HomeAutomation/WeatherStation/CC2650/app.cfg"
+        cfgArgs="null"
+        />
+    </configurations>
+    <executables>
+    <executable name="app"
+        pname="app.xrm3"
+        target="iar.targets.arm.M3"
+        platform="ti.platforms.simplelink:CC2650F128"
+        profile="release"
+        xCfgScript="package/cfg/app_prm3.cfg"
+        xCfgPrefix="package/cfg/app_prm3"
+        cfgScript="Z:/ti/simplelink/zstack_home_1_02_02a_44539/Projects/zstack/HomeAutomation/WeatherStation/CC2650/app.cfg"
+        cfgArgs="null"
+        />
+    </executables>
+    <tests>
+    <test exeName="app.xrm3"
+        args=""
+        groupName="app.xrm3"
+        refOutput="undefined"
+        refExitCode="0"
+        execArgs=""
+        />
+    </tests>
+    <releases relDir="package/rel/">
+    <release name="configPkg"
+        pname="configPkg.tar"
+        label="default"
+    >
+        <file name="package/package.bld.xml"/>
+        <file name="package/build.cfg"/>
+        <file name="package/package.xdc.inc"/>
+    </release>
+    </releases>
+    <repositories>
+    </repositories>
+</package>

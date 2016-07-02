@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<iarUserArgVars>
+  <group active="true" name="CC26xx TI-RTOS">
+    <variable>
+      <name>XDCROOT</name>
+      <value>z:\ti\xdctools_3_30_06_67_core</value>
+    </variable>
+    <variable>
+      <name>XDCPATH</name>
+      <value>Z:\ti\tirtos_simplelink_2_11_01_09\packages;Z:\ti\tirtos_simplelink_2_11_01_09\products\bios_6_41_02_41\packages;Z:\ti\tirtos_simplelink_2_11_01_09\products\cc26xxware_2_00_06_14829\inc;Z:\ti\tirtos_simplelink_2_11_01_09\products\cc26xxware_2_00_06_14829\driverlib;Z:\ti\tirtos_simplelink_2_11_01_09\products\cc26xxware_2_00_06_14829</value>
+    </variable>
+    <variable>
+      <name>DRIVERLIB</name>
+      <value>Z:\ti\tirtos_simplelink_2_11_01_09\products\cc26xxware_2_00_06_14829</value>
+    </variable>
+    <variable>
+      <name>BOUNDARY</name>
+      <value>z:\Program Files\Texas Instruments\Boundary</value>
+    </variable>
+  </group>
+</iarUserArgVars>
+
+

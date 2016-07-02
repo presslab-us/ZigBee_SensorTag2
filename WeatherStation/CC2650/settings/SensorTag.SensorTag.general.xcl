@@ -1,0 +1,15 @@
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\bin\armproc.dll" 
+
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\bin\armxds2.dll" 
+
+"Z:\ti\simplelink\zstack_home_1_02_02a_44539\Projects\zstack\HomeAutomation\WeatherStation\CC2650\SensorTag\Exe\SensorTag.out" 
+
+--plugin "C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\bin\armbat.dll" 
+
+--device_macro "C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\config\debugger\TexasInstruments\CC26xx.dmac" 
+
+--flash_loader "C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\config\flashloader\TexasInstruments\FlashCC26xxF128RAM20.board" 
+
+
+
+

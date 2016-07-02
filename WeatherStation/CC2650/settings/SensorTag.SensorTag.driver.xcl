@@ -1,0 +1,27 @@
+ -B 
+
+"--endian=little" 
+
+"--cpu=Cortex-M3" 
+
+"--fpu=None" 
+
+"-p" 
+
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\CONFIG\debugger\TexasInstruments\CC2650F128.ddf" 
+
+"--semihosting" 
+
+"--device=CC2650F128" 
+
+"--drv_restore_breakpoints=_call_main" 
+
+"--drv_catch_exceptions=0x7f0" 
+
+"--drv_swo_clock_setup=48000000,0,1000000" 
+
+"--xds_board_file=C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\config\debugger\TexasInstruments\xds\CC2650_XDS110_JTAG.dat" 
+
+
+
+
